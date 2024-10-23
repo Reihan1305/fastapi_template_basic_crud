@@ -1,0 +1,55 @@
+services:
+  api: &main_app
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: basic_template:${BASIC_TEMPLATE_VERSION:-latest}
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      BASIC_TEMPLATE_HOST: 0.0.0.0
+      BASIC_TEMPLATE_DB_HOST: basic_template-db
+      BASIC_TEMPLATE_DB_PORT: 5432
+      BASIC_TEMPLATE_DB_USER: postgres
+      BASIC_TEMPLATE_DB_PASS: reihan1305
+      BASIC_TEMPLATE_DB_BASE: basic_template
+
+  db:
+    image: postgres:16.3-bullseye
+    hostname: basic_template-db
+    environment:
+      POSTGRES_PASSWORD: "reihan1305"
+      POSTGRES_USER: "postgres"
+      POSTGRES_DB: "basic_template"
+    volumes:
+      - basic_template-db-data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: pg_isready -U postgres
+      interval: 2s
+      timeout: 3s
+      retries: 40
+
+  migrator:
+    image: basic_template:${BASIC_TEMPLATE_VERSION:-latest}
+    restart: "no"
+    command: alembic upgrade head
+    environment:
+      BASIC_TEMPLATE_DB_HOST: basic_template-db
+      BASIC_TEMPLATE_DB_PORT: 5432
+      BASIC_TEMPLATE_DB_USER: postgres
+      BASIC_TEMPLATE_DB_PASS: reihan1305
+      BASIC_TEMPLATE_DB_BASE: basic_template
+    depends_on:
+      db:
+        condition: service_healthy
+
+
+
+volumes:
+  basic_template-db-data:
+    name: basic_template-db-data
